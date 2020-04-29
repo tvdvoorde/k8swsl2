@@ -21,6 +21,10 @@ add-apt-repository \
 apt-get -y update
 apt-get -y install docker-ce docker-ce-cli containerd.io
 
+service docker start
+
+
+
 # ETCD KUBERNETES
 
 wget -q --show-progress --https-only --timestamping "https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz"
@@ -493,8 +497,6 @@ start-stop-daemon --start --background --no-close --exec /usr/local/bin/kubelet 
   --tls-private-key-file=/var/lib/kubelet/localhost-key.pem \
   --fail-swap-on=false \
   --v=2  >> "/var/log/kubelet.log" 2>&1
-
-service docker start
 
 
 
