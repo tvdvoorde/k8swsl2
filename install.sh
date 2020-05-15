@@ -1,38 +1,22 @@
-#DOCKER
-
 apt-get -y update
-
 apt-get -y install \
     apt-transport-https \
     ca-certificates \
     curl \
     gnupg-agent \
     software-properties-common
-
-
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-
-
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
    $(lsb_release -cs) \
    stable"
-
 apt-get -y update
 apt-get -y install docker-ce docker-ce-cli containerd.io
 
-service docker start
-
-
-
 # ETCD KUBERNETES
-
 wget -q --show-progress --https-only --timestamping "https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz"
-
 tar -xvf etcd-v3.3.9-linux-amd64.tar.gz
 mv etcd-v3.3.9-linux-amd64/etcd* /usr/local/bin/
-
-
 wget -q --show-progress --https-only --timestamping \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.0/bin/linux/amd64/kube-apiserver" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.0/bin/linux/amd64/kube-controller-manager" \
@@ -40,12 +24,9 @@ wget -q --show-progress --https-only --timestamping \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.0/bin/linux/amd64/kubectl" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.0/bin/linux/amd64/kube-proxy" \
   "https://storage.googleapis.com/kubernetes-release/release/v1.14.0/bin/linux/amd64/kubelet"
-
 chmod +x kube-apiserver kube-controller-manager kube-scheduler kubectl kubelet kube-proxy
 mv kube-apiserver kube-controller-manager kube-scheduler kubectl kubelet kube-proxy /usr/local/bin/
-
 iptables -P FORWARD ACCEPT
-
 mkdir -p \
   /etc/cni/net.d \
   /opt/cni/bin \
@@ -53,24 +34,17 @@ mkdir -p \
   /var/lib/kube-proxy \
   /var/lib/kubernetes \
   /var/run/kubernetes 
-
-wget -q --show-progress --https-only --timestamping \
-  "https://github.com/containernetworking/plugins/releases/download/v0.7.5/cni-plugins-amd64-v0.7.5.tgz"
-
+wget -q --show-progress --https-only --timestamping "https://github.com/containernetworking/plugins/releases/download/v0.7.5/cni-plugins-amd64-v0.7.5.tgz"
 tar -xzvf cni-plugins-amd64-v0.7.5.tgz --directory /opt/cni/bin/
-
-
 
 ### apt-get update
 ### apt-get install -y socat conntrack ipset docker.io
-
 
 cd ~
 
 openssl genrsa -out ca-key.pem 2048
 openssl req -x509 -new -nodes -key ca-key.pem -subj "/CN=Kubernetes" -days 10000 -out ca.pem
 openssl genrsa -out kubernetes-key.pem 2048
-
 
 INSTANCE=$(hostname -s)
 
@@ -81,7 +55,6 @@ prompt = no
 default_md = sha256
 req_extensions = req_ext
 distinguished_name = dn
-
 [ dn ]
 C = NL
 ST = ZH
@@ -89,22 +62,15 @@ L = Den Haag
 O = IT
 OU = IT
 CN = kubernetes
-
 [ req_ext ]
 subjectAltName = @alt_names
-
 [ alt_names ]
-
 DNS.1 = kubernetes
 DNS.2 = kubernetes.default
 DNS.3 = ${INSTANCE}
 DNS.4 = localhost
 IP.1 = 127.0.0.1
 IP.2 = 10.96.0.1
-
-
-
-
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
@@ -113,11 +79,8 @@ extendedKeyUsage=serverAuth,clientAuth
 subjectAltName=@alt_names
 EOF
 
-
 openssl req -new -key kubernetes-key.pem -out kubernetes.csr -config kubernetes.conf
 openssl x509 -req -in kubernetes.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out kubernetes.pem -days 10000 -extensions v3_ext -extfile kubernetes.conf
-
-
 
 ENCRYPTION_KEY=$(head -c 32 /dev/urandom | base64)
 cat > encryption-config.yaml <<EOF
@@ -134,31 +97,23 @@ resources:
       - identity: {}
 EOF
 
-
-
 openssl genrsa -out service-account-key.pem 2048
 openssl req -new -key service-account-key.pem -out service-account.csr -subj "/CN=service-accounts"
 openssl x509 -req -in service-account.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out service-account.pem -days 10000 
-
-
 openssl genrsa -out kube-controller-manager-key.pem 2048
 openssl req -new -key kube-controller-manager-key.pem -out kube-controller-manager.csr -subj "/CN=system:kube-controller-manager/O=system:kube-controller-manager"
 openssl x509 -req -in kube-controller-manager.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out kube-controller-manager.pem -days 10000 
-
 openssl genrsa -out kube-proxy-key.pem 2048
 openssl req -new -key kube-proxy-key.pem -out kube-proxy.csr -subj "/CN=system:kube-proxy/O=system:node-proxier"
 openssl x509 -req -in kube-proxy.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out kube-proxy.pem -days 10000 
-
 openssl genrsa -out kube-scheduler-key.pem 2048
 openssl req -new -key kube-scheduler-key.pem -out kube-scheduler.csr -subj "/CN=system:kube-scheduler/O=system:kube-scheduler"
 openssl x509 -req -in kube-scheduler.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out kube-scheduler.pem -days 10000 
-
 openssl genrsa -out admin-key.pem 2048
 openssl req -new -key admin-key.pem -out admin.csr -subj "/CN=admin/O=system:masters"
 openssl x509 -req -in admin.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out admin.pem -days 10000 
 
 INSTANCE=$(hostname -s)
-
 
 openssl genrsa -out localhost-key.pem 2048
 cat > localhost.conf <<EOF
@@ -168,7 +123,6 @@ prompt = no
 default_md = sha256
 req_extensions = req_ext
 distinguished_name = dn
-
 [ dn ]
 C = NL
 ST = ZH
@@ -176,15 +130,12 @@ L = Den Haag
 O = system:nodes
 OU = IT
 CN = system:node:${INSTANCE,,}
-
 [ req_ext ]
 subjectAltName = @alt_names
-
 [ alt_names ]
 DNS.1 = ${INSTANCE,,}
 DNS.2 = localhost
 IP.1 = 127.0.0.1
-
 [ v3_ext ]
 authorityKeyIdentifier=keyid,issuer:always
 basicConstraints=CA:FALSE
@@ -196,7 +147,6 @@ EOF
 openssl req -new -key localhost-key.pem -out localhost.csr -config localhost.conf
 openssl x509 -req -in localhost.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -out localhost.pem -days 10000 -extensions v3_ext -extfile localhost.conf
 
-
 mkdir -p /var/lib/kubernetes/
 mv /root/ca.pem \
   /root/ca-key.pem \
@@ -206,13 +156,6 @@ mv /root/ca.pem \
   /root/service-account.pem \
   /root/encryption-config.yaml \
   /var/lib/kubernetes/
-
-
-
-# configs
-
-
-
 
 kubectl config set-cluster singlenode \
   --certificate-authority=/var/lib/kubernetes/ca.pem \
@@ -229,7 +172,6 @@ kubectl config set-context default \
   --user=system:node:${INSTANCE,,} \
   --kubeconfig=localhost.kubeconfig
 kubectl config use-context default --kubeconfig=localhost.kubeconfig
-
 
 kubectl config set-cluster singlenode \
   --certificate-authority=/var/lib/kubernetes/ca.pem \
@@ -304,11 +246,6 @@ cp /var/lib/kubernetes/ca.pem \
         /var/lib/kubernetes/kubernetes.pem \
         /etc/etcd/
 
-
-###
-
-
-
 start-stop-daemon --start --background --no-close --exec "/usr/local/bin/etcd" -- \
   --name localhost \
   --cert-file=/etc/etcd/kubernetes.pem \
@@ -349,7 +286,6 @@ start-stop-daemon --start --background --no-close --exec /usr/local/bin/kube-api
   --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \
   --v=2 >>"/var/log/kube-apiserver.log" 2>&1
 
-
 start-stop-daemon --start --background --no-close --exec /usr/local/bin/kube-controller-manager -- \
   --address=0.0.0.0 \
   --cluster-cidr=10.32.0.0/12 \
@@ -364,15 +300,11 @@ start-stop-daemon --start --background --no-close --exec /usr/local/bin/kube-con
   --use-service-account-credentials=true \
   --v=2 >> "/var/log/kube-controller-manager" 2>&1
 
-
-
 start-stop-daemon --start --background --no-close --exec /usr/local/bin/kube-scheduler -- \
   --kubeconfig=/var/lib/kubernetes/kube-scheduler.kubeconfig \
   --address=0.0.0.0 \
   --leader-elect=true \
   --v=2 >> "/var/log/kube-scheduler.log" 2>&1
-
-
 
 cat <<EOF | kubectl apply --kubeconfig /root/admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1
@@ -396,9 +328,6 @@ rules:
       - "*"
 EOF
 
-
-
-
 cat <<EOF | kubectl apply --kubeconfig /root/admin.kubeconfig -f -
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
@@ -421,12 +350,9 @@ mv /root/localhost-key.pem \
    /var/lib/kubelet/
 mv /root/localhost.kubeconfig /var/lib/kubelet/kubeconfig
 
-
 kubectl get componentstatuses
 
-
-
-cat <<EOF | tee /etc/cni/net.d/10-bridge.conf
+cat <<EOF | sudo tee /etc/cni/net.d/10-bridge.conf
 {
     "cniVersion": "0.3.1",
     "name": "bridge",
@@ -444,7 +370,7 @@ cat <<EOF | tee /etc/cni/net.d/10-bridge.conf
 }
 EOF
 
-cat <<EOF | tee /etc/cni/net.d/99-loopback.conf
+cat <<EOF | sudo tee /etc/cni/net.d/99-loopback.conf
 {
     "cniVersion": "0.3.1",
     "type": "loopback"
@@ -471,7 +397,6 @@ resolvConf: "/etc/resolv.conf"
 runtimeRequestTimeout: "15m"
 EOF
 
-
 mv /root/kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
 
 cat <<EOF | tee /var/lib/kube-proxy/kube-proxy-config.yaml
@@ -483,9 +408,10 @@ mode: "iptables"
 clusterCIDR: "10.96.0.0/12"
 EOF
 
-
 start-stop-daemon --start --background --no-close --exec /usr/local/bin/kube-proxy -- \
   --config=/var/lib/kube-proxy/kube-proxy-config.yaml >> "/var/log/kube-proxy.log" 2>&1
+
+service docker start
 
 start-stop-daemon --start --background --no-close --exec /usr/local/bin/kubelet -- \
   --config=/var/lib/kubelet/kubelet-config.yaml \
@@ -498,10 +424,7 @@ start-stop-daemon --start --background --no-close --exec /usr/local/bin/kubelet 
   --fail-swap-on=false \
   --v=2  >> "/var/log/kubelet.log" 2>&1
 
-
-
 kubectl get nodes
-
 
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -687,5 +610,13 @@ spec:
     protocol: TCP
 EOF
 
+iptables -P FORWARD ACCEPT
 
-
+kubectl get componentstatuses
+kubectl get pods -o wide -A
+kubectl get nodes 
+kubectl run nginx --image=nginx --port=80 --restart=Never
+kubectl get pods -o wide -A
+kubectl expose pod nginx --type=ClusterIP
+kubectl run busybox --image=busybox:1.28 -it --restart=Never -- sleep 3600
+# kubectl exec busybox -it -- nslookup nginx
