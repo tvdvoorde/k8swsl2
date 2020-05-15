@@ -1,6 +1,5 @@
-# curl https://raw.githubusercontent.com/tvdvoorde/k8swsl2/master/install.sh|sudo bash
-echo Starting ...
-echo.
+# sudo -i
+# curl https://raw.githubusercontent.com/tvdvoorde/k8swsl2/master/install.sh|bash
 export DEBIAN_FRONTEND=noninteractive
 apt-get -y update
 apt-get -y install \
@@ -615,12 +614,3 @@ spec:
 EOF
 
 iptables -P FORWARD ACCEPT
-
-kubectl get componentstatuses
-kubectl get pods -o wide -A
-kubectl get nodes 
-kubectl run nginx --image=nginx --port=80 --restart=Never
-kubectl get pods -o wide -A
-kubectl expose pod nginx --type=ClusterIP
-kubectl run busybox --image=busybox:1.28 -it --restart=Never -- sleep 3600
-# kubectl exec busybox -it -- nslookup nginx
