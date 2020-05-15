@@ -1,3 +1,4 @@
+# curl https://raw.githubusercontent.com/tvdvoorde/k8swsl2/master/install.sh|sudo bash
 apt-get -y update
 apt-get -y install \
     apt-transport-https \
